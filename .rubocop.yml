@@ -1,0 +1,63 @@
+AllCops:
+  NewCops: enable
+  TargetRubyVersion: 2.6
+
+Bundler/OrderedGems:
+  Enabled: false
+
+Gemspec/RequiredRubyVersion:
+  Enabled: false
+
+Layout/ArgumentAlignment:
+  EnforcedStyle: with_fixed_indentation
+Layout/MultilineMethodCallIndentation:
+  EnforcedStyle: indented
+
+Metrics/AbcSize:
+  Max: 25
+Metrics/BlockLength:
+  Exclude:
+    - spec/**/*
+    - heavy_keeper.gemspec
+Metrics/CyclomaticComplexity:
+  Max: 10
+Metrics/MethodLength:
+  Max: 20
+Metrics/PerceivedComplexity:
+  Max: 10
+
+Naming/VariableNumber:
+  Enabled: false
+Naming/PredicateName:
+  Enabled: false
+
+Style/Alias:
+  EnforcedStyle: prefer_alias_method
+Style/BlockDelimiters:
+  Exclude:
+    - spec/**/*_spec.rb
+Style/Documentation:
+  Enabled: false
+Style/FrozenStringLiteralComment:
+  Enabled: false
+Style/GuardClause:
+  Enabled: false
+Style/IfUnlessModifier:
+  Enabled: false
+Style/ModuleFunction:
+  Exclude:
+    - 'lib/heavy_keeper.rb'
+Style/PercentLiteralDelimiters:
+  Enabled: false
+Style/SafeNavigation:
+  Enabled: false
+Style/StringLiterals:
+  EnforcedStyle: single_quotes
+Style/TrailingUnderscoreVariable:
+  Enabled: false
+Style/WordArray:
+  EnforcedStyle: percent
+Layout/LineLength:
+  Max: 200
+Lint/AmbiguousBlockAssociation:
+  Enabled: false
