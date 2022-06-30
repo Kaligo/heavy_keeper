@@ -6,8 +6,6 @@ require 'json'
 # rubocop:disable Naming/MethodParameterName
 module HeavyKeeper
   class Bucket
-    KEY_PREFIX = "#{HeavyKeeper::Config.config.app_name}_bucket".freeze
-
     def initialize(storage = HeavyKeeper::Config.config.storage)
       @storage = storage
     end
@@ -31,7 +29,11 @@ module HeavyKeeper
     attr_reader :storage
 
     def hash_key(key)
-      "#{KEY_PREFIX}:hash:#{key}"
+      "#{key_prefix}:hash:#{key}"
+    end
+
+    def key_prefix
+      "#{HeavyKeeper::Config.config.cache_prefix}_bucket"
     end
   end
 end

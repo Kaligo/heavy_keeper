@@ -5,7 +5,7 @@ RSpec.describe HeavyKeeper::Bucket do
   describe '#set' do
     it 'sets data correctly' do
       expect { bucket.set('users', 1, 2, ['fingerprint', 10]) }
-        .to change { redis.hget('app_name_bucket:hash:users', '1:2') }
+        .to change { redis.hget('cache_prefix_bucket:hash:users', '1:2') }
         .from(nil).to('["fingerprint",10]')
     end
   end

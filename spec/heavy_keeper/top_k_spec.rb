@@ -140,7 +140,7 @@ RSpec.describe HeavyKeeper::TopK do
       let(:data) { { 'top_k' => '10', 'width' => '256', 'depth' => '5', 'decay' => '0.9e0' } }
 
       it 'stores the options correctly' do
-        expect { subject }.to change { redis.hgetall('app_name_heavy_keeper:users:data') }
+        expect { subject }.to change { redis.hgetall('cache_prefix_heavy_keeper:users:data') }
           .from({}).to(data)
       end
     end

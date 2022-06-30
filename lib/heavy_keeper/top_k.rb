@@ -7,8 +7,6 @@ require_relative '../validations/message'
 
 module HeavyKeeper
   class TopK # rubocop:disable Metrics/ClassLength
-    KEY_PREFIX = "#{HeavyKeeper::Config.config.app_name}_heavy_keeper"
-
     Validator = ::Dry::Schema.Params do
       required(:top_k).filled(:integer, gt?: 0)
       required(:width).filled(:integer, gt?: 0)
@@ -147,7 +145,6 @@ module HeavyKeeper
     #
     # @return [Array[Integer]] return the count of each item
     def count(key, *items)
-      # return count for each item requested
       items.map do |item|
         min_heap.count(key, item)
       end
@@ -205,7 +202,11 @@ module HeavyKeeper
     attr_reader :storage, :min_heap, :bucket
 
     def metadata_key(key)
-      "#{KEY_PREFIX}:#{key}:data"
+      "#{key_prefix}:#{key}:data"
+    end
+
+    def key_prefix
+      "#{HeavyKeeper::Config.config.cache_prefix}_heavy_keeper"
     end
 
     def validate(options)

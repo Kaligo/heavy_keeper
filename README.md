@@ -28,8 +28,8 @@ You will need to add an initializer to provide some configuration:
 
 ```ruby
 HeavyKeeper::Config.configure do |config|
-  config.app_name = 'app_name'.freeze # currently used as prefix for the redis data structures.
-  config.storage = SharedCache.data_store # a Redis store, at least version 4.0
+  config.cache_prefix = 'cache_prefix'.freeze # currently used as prefix for the redis data structures.
+  config.storage = Redis.new # a Redis store, at least version 4.0
 end
 ```
 

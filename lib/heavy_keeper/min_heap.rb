@@ -6,8 +6,6 @@
 #
 module HeavyKeeper
   class MinHeap
-    KEY_PREFIX = "#{HeavyKeeper::Config.config.app_name}_min_heap".freeze
-
     def initialize(storage = HeavyKeeper::Config.config.storage)
       @storage = storage
     end
@@ -80,11 +78,15 @@ module HeavyKeeper
     attr_reader :storage
 
     def sorted_set_key(key)
-      "#{KEY_PREFIX}:sorted_set:#{key}"
+      "#{key_prefix}:sorted_set:#{key}"
     end
 
     def hash_key(key)
-      "#{KEY_PREFIX}:hash:#{key}"
+      "#{key_prefix}:hash:#{key}"
+    end
+
+    def key_prefix
+      "#{HeavyKeeper::Config.config.cache_prefix}_heavy_keeper"
     end
   end
 end
