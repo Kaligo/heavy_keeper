@@ -54,6 +54,7 @@ GEM
       byebug (~> 11.0)
       pry (~> 0.13.0)
     rainbow (3.1.1)
+    rake (13.0.6)
     redis (4.7.0)
     regexp_parser (2.4.0)
     rexml (3.2.5)
@@ -94,6 +95,7 @@ DEPENDENCIES
   heavy_keeper!
   mock_redis
   pry-byebug
+  rake (~> 13.0)
   rspec
   rubocop
 

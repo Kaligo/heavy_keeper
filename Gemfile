@@ -7,6 +7,8 @@ gemspec
 
 gem 'rubocop', require: false
 
+gem 'rake', '~> 13.0'
+
 group :test do
   gem 'mock_redis'
   gem 'rspec'
