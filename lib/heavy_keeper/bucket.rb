@@ -6,7 +6,7 @@ require 'json'
 # rubocop:disable Naming/MethodParameterName
 module HeavyKeeper
   class Bucket
-    def initialize(storage = HeavyKeeper::Config.config.storage)
+    def initialize(storage = HeavyKeeper.config.storage)
       @storage = storage
     end
 
@@ -33,7 +33,7 @@ module HeavyKeeper
     end
 
     def key_prefix
-      "#{HeavyKeeper::Config.config.cache_prefix}_bucket"
+      "#{HeavyKeeper.config.cache_prefix}_bucket"
     end
   end
 end

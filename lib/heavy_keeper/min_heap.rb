@@ -6,7 +6,7 @@
 #
 module HeavyKeeper
   class MinHeap
-    def initialize(storage = HeavyKeeper::Config.config.storage)
+    def initialize(storage = HeavyKeeper.config.storage)
       @storage = storage
     end
 
@@ -86,7 +86,7 @@ module HeavyKeeper
     end
 
     def key_prefix
-      "#{HeavyKeeper::Config.config.cache_prefix}_heavy_keeper"
+      "#{HeavyKeeper.config.cache_prefix}_heavy_keeper"
     end
   end
 end

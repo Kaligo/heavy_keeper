@@ -19,7 +19,7 @@ module HeavyKeeper
     # @param storage [Redis] A Redis client to interact with Redis
     #
     # @return [HeavyKeeper::TopK] new instance of the controller
-    def initialize(storage: HeavyKeeper::Config.config.storage)
+    def initialize(storage: HeavyKeeper.config.storage)
       @storage = storage
       @min_heap = MinHeap.new(storage)
       @bucket = Bucket.new(storage)
@@ -206,7 +206,7 @@ module HeavyKeeper
     end
 
     def key_prefix
-      "#{HeavyKeeper::Config.config.cache_prefix}_heavy_keeper"
+      "#{HeavyKeeper.config.cache_prefix}_heavy_keeper"
     end
 
     def validate(options)
