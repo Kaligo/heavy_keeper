@@ -206,7 +206,7 @@ module HeavyKeeper
     end
 
     def key_prefix
-      "#{HeavyKeeper.config.cache_prefix}_heavy_keeper"
+      "#{HeavyKeeper.config.cache_prefix}_heavykeeper"
     end
 
     def validate(options)

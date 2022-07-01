@@ -86,7 +86,7 @@ module HeavyKeeper
     end
 
     def key_prefix
-      "#{HeavyKeeper.config.cache_prefix}_heavy_keeper"
+      "#{HeavyKeeper.config.cache_prefix}_min_heap"
     end
   end
 end

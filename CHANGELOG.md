@@ -1,3 +1,6 @@
+## [0.1.2] - 2022-07-01
+- Fix key typos
+
 ## [0.1.1] - 2022-06-30
 - Move config up to HeavyKeeper namespace to save some redundant typing
 

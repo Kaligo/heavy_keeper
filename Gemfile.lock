@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    heavy_keeper (0.1.1)
+    heavy_keeper (0.1.2)
       dry-configurable (>= 0.13.0)
       dry-schema (~> 1)
       redis (~> 4)
