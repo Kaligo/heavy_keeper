@@ -6,6 +6,12 @@
 /pkg/
 /spec/reports/
 /tmp/
+vendor/bundle
+Gemfile.lock
 
 # rspec failure tracking
 .rspec_status
+
+.byebug_history
+
+.ruby-version
