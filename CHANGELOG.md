@@ -1,3 +1,7 @@
+## [0.1.4] - 2022-11-19
+
+- Support redis-rb 5.x
+
 ## [0.1.3] - 2022-07-01
 - Actually fix key typos with specs
 
