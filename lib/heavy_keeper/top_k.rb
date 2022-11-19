@@ -38,6 +38,10 @@ module HeavyKeeper
     # @return OK on success, otherwise raise error
     def reserve(key, options)
       options = validate(options)
+      # We need to use Decimal when validating to accept integer
+      # number. However, we need to convert to float when save to Redis
+      # because redis-rb 5 don't support Decimal type
+      options[:decay] = options[:decay].to_f
 
       storage.mapped_hmset(metadata_key(key), options)
     end

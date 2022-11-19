@@ -2,6 +2,8 @@
 
 require 'heavy_keeper'
 require 'mock_redis'
+require 'redis'
+require 'byebug'
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure

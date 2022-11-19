@@ -38,14 +38,20 @@ RSpec.describe HeavyKeeper::MinHeap do
     let(:top_k) { 3 }
     subject { min_heap.min(key) }
 
-    before do
-      min_heap.add('users', 'item_1', 10, top_k)
-      min_heap.add('users', 'item_2', 7, top_k)
-      min_heap.add('users', 'item_3', 14, top_k)
-      min_heap.add('users', 'item_4', 4, top_k)
+    context 'when there are no data' do
+      it { is_expected.to eq 0 }
     end
 
-    it { is_expected.to eq 7 }
+    context 'when there are data' do
+      before do
+        min_heap.add('users', 'item_1', 10, top_k)
+        min_heap.add('users', 'item_2', 7, top_k)
+        min_heap.add('users', 'item_3', 14, top_k)
+        min_heap.add('users', 'item_4', 4, top_k)
+      end
+
+      it { is_expected.to eq 7 }
+    end
   end
 
   describe '#exist?' do
