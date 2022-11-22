@@ -26,7 +26,7 @@ module HeavyKeeper
 
     def min(key)
       item = storage.zrangebyscore(sorted_set_key(key), - Float::INFINITY, Float::INFINITY, limit: [0, 1]).first
-      count(key, item)
+      item ? count(key, item) : 0
     end
 
     def exist?(key, item)

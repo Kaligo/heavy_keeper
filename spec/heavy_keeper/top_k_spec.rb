@@ -3,8 +3,12 @@
 # validation and simple interaction.
 #
 RSpec.describe HeavyKeeper::TopK do
-  let(:redis) { MockRedis.new }
+  let(:redis) { Redis.new }
   let(:top_k) { described_class.new(storage: redis) }
+
+  before do
+    redis.flushdb
+  end
 
   describe 'integration tests' do
     # there are 10 elements in top-k list, at least 9 elements should be
@@ -137,7 +141,7 @@ RSpec.describe HeavyKeeper::TopK do
 
     context 'when options are provided with valid value' do
       let(:options) { { top_k: 10, width: 256, depth: 5, decay: 0.9 } }
-      let(:data) { { 'top_k' => '10', 'width' => '256', 'depth' => '5', 'decay' => '0.9e0' } }
+      let(:data) { { 'top_k' => '10', 'width' => '256', 'depth' => '5', 'decay' => '0.9' } }
 
       it 'stores the options correctly' do
         expect { subject }.to change { redis.hgetall('cache_prefix_heavykeeper:users:data') }
