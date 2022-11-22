@@ -16,7 +16,7 @@ jobs:
           - 5
     env:
       RUBY_VERSION: ${{ matrix.ruby }}
-      BUNDLE_GEMFILE: Gemfile.redis.${{ redis }}
+      BUNDLE_GEMFILE: Gemfile.redis.${{ matrix.redis }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
