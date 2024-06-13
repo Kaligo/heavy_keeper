@@ -29,7 +29,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'dry-configurable', '>= 0.13.0'
   spec.add_dependency 'dry-schema', '~> 1'
   spec.add_dependency 'redis'
-  spec.add_dependency 'xxhash', '~> 0.4.0'
+  spec.add_dependency 'xxhash'
 
   spec.metadata['rubygems_mfa_required'] = 'true'
 end

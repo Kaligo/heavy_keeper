@@ -1,3 +1,7 @@
+## [0.1.5] - 2024-06-13
+
+- Support latest version of xx-hash
+
 ## [0.1.4] - 2022-11-19
 
 - Support redis-rb 5.x
