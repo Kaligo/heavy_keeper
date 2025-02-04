@@ -3,7 +3,7 @@
 require 'dry-schema'
 require 'securerandom'
 require 'xxhash'
-require_relative '../validations/message'
+require_relative 'validations/message'
 
 module HeavyKeeper
   class TopK # rubocop:disable Metrics/ClassLength
@@ -217,7 +217,7 @@ module HeavyKeeper
       result = Validator.call(options)
 
       if result.failure?
-        error = ::Validations::Message.new.build(result.errors.to_h).join('. ')
+        error = Validations::Message.new.build(result.errors.to_h).join('. ')
         raise HeavyKeeper::Error, error
       end
 
