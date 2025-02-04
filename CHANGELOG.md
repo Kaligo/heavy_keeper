@@ -1,3 +1,8 @@
+## [0.1.6] - 2025-02-04
+
+- Move `Validations::Message` to inside HeavyKeeper namespace to avoid
+conflict
+
 ## [0.1.5] - 2024-06-13
 
 - Support latest version of xx-hash
