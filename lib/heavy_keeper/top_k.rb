@@ -2,6 +2,7 @@
 
 require 'dry-schema'
 require 'securerandom'
+require 'stringio'
 require 'xxhash'
 require_relative 'validations/message'
 
