@@ -1,0 +1,5 @@
+inherit_from: ../.rubocop.yml
+
+# Benchmark and report scripts, not shipped in the gem
+Metrics:
+  Enabled: false

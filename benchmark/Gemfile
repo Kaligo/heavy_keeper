@@ -1,0 +1,10 @@
+# frozen_string_literal: true
+
+source 'https://rubygems.org'
+
+gemspec path: '..'
+
+# Versions pinned for the spike
+gem 'redis', '5.4.1'
+gem 'redis-client', '0.31.0'
+gem 'connection_pool', '2.5.5'
