@@ -13,6 +13,11 @@ counter
 - A sorted set with maximum K elements to act as a MinHeap
 - A hash with maximum K elements to store more correct counter of the element in MinHeap
 
+`increase_by` and `add` update these structures in one Lua script
+(`lib/heavy_keeper/increase_by.lua`), so each call is atomic and makes only 2
+round trips. The Redis server must be version 5.0 or later and must allow
+`EVAL` and `EVALSHA`.
+
 
 ## Installation
 

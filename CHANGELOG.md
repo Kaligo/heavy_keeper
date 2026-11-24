@@ -1,3 +1,15 @@
+## [0.2.0] - 2026-11-24
+
+- Run `TopK#increase_by` and `TopK#add` as one Lua script (`EVALSHA`). Each
+call now makes 1 `HGETALL` and 1 `EVALSHA`, in place of about 22 round trips
+for each item. Each script is atomic, so concurrent writers no longer lose
+updates or let the min-heap grow past `top_k`.
+- Split calls with more than 256 bucket updates (items x depth) into more than
+one script, to limit how long each script blocks Redis.
+- The Redis server must allow `EVAL` and `EVALSHA`. Redis 5.0 or later is still
+required, as before.
+- The Redis data format does not change. Lists written by 0.1.6 keep working.
+
 ## [0.1.6] - 2025-02-04
 
 - Move `Validations::Message` to inside HeavyKeeper namespace to avoid

@@ -24,13 +24,13 @@ module HeavyKeeper
       storage.del(hash_key(key))
     end
 
-    private
-
-    attr_reader :storage
-
     def hash_key(key)
       "#{key_prefix}:hash:#{key}"
     end
+
+    private
+
+    attr_reader :storage
 
     def key_prefix
       "#{HeavyKeeper.config.cache_prefix}_bucket"

@@ -204,6 +204,139 @@ RSpec.describe HeavyKeeper::TopK do
 
       it { is_expected.to eq [nil, 10] }
     end
+
+    context 'when there are several items' do
+      let(:items) { [['item_1', 1], ['item_2', 2], ['item_3', 3]] }
+
+      before { top_k.reserve('users', top_k: 10, width: 10, depth: 2, decay: 0.9) }
+
+      it 'uses one HGETALL and one EVALSHA' do
+        expect(redis).to receive(:hgetall).once.and_call_original
+        expect(redis).to receive(:evalsha).once.and_call_original
+        expect(redis).not_to receive(:hget)
+        expect(redis).not_to receive(:hset)
+
+        expect(subject).to eq [1, 2, 3]
+      end
+    end
+
+    context 'when the items need more bucket updates than one script allows' do
+      let(:items) { Array.new(10) { |i| ["item_#{i}", 1] } }
+
+      before { top_k.reserve('users', top_k: 10, width: 2048, depth: 32, decay: 0.9) }
+
+      it 'splits the items into more than one script' do
+        # 256 bucket updates / depth 32 = 8 items for each script
+        expect(redis).to receive(:evalsha).twice.and_call_original
+
+        expect(subject).to eq [1] * 10
+      end
+    end
+
+    context 'when Redis does not have the script in its cache' do
+      before do
+        top_k.reserve('users', top_k: 1, width: 10, depth: 2, decay: 0.9)
+        redis.script(:flush)
+      end
+
+      it 'loads the script again with EVAL' do
+        expect(redis).to receive(:eval).once.and_call_original
+
+        expect(subject).to eq [1]
+        expect(redis.script(:exists, described_class::INCREASE_BY_SHA)).to be true
+      end
+    end
+
+    context 'when the buckets hold data from version 0.1.6' do
+      let(:item) { 'item' }
+      let(:fingerprint) { XXhash.xxh64(item) }
+      let(:items) { [[item, 1]] }
+      let(:bucket) { HeavyKeeper::Bucket.new(redis) }
+
+      before do
+        top_k.reserve('users', top_k: 1, width: 1, depth: 1, decay: 0.9)
+        # Data as written by the Ruby implementation before 0.2.0
+        bucket.set('users', 0, 0, [fingerprint, 5])
+        HeavyKeeper::MinHeap.new(redis).add('users', item, 5, 1)
+      end
+
+      it 'reads and updates the bucket in the same format' do
+        # Lua numbers cannot hold this fingerprint exactly
+        expect(fingerprint).to be > 2**53
+
+        expect(subject).to eq [6]
+        expect(redis.hget(bucket.hash_key('users'), '0:0')).to eq JSON.generate([fingerprint, 6])
+      end
+    end
+
+    context 'when another item holds the bucket' do
+      let(:bucket) { HeavyKeeper::Bucket.new(redis) }
+      let(:items) { [['item_b', 1]] }
+
+      before do
+        top_k.reserve('users', top_k: 2, width: 1, depth: 1, decay: decay)
+        top_k.increase_by('users', ['item_a', count])
+      end
+
+      context 'when the decay always happens' do
+        # decay ^ count = 1, and every random number is below 1
+        let(:decay) { 1.0 }
+        let(:count) { 1 }
+
+        it 'decays the other item and takes the bucket' do
+          expect(subject).to eq [1]
+          expect(bucket.get('users', 0, 0)).to eq [XXhash.xxh64('item_b'), 1]
+        end
+      end
+
+      context 'when the decay almost never happens' do
+        # decay ^ count is about 1.7e-46
+        let(:decay) { 0.9 }
+        let(:count) { 1_000 }
+
+        it 'keeps the bucket of the other item' do
+          expect(subject).to eq [0]
+          expect(bucket.get('users', 0, 0)).to eq [XXhash.xxh64('item_a'), 1_000]
+        end
+      end
+    end
+
+    context 'when several clients write at the same time' do
+      let(:heap) { HeavyKeeper::MinHeap.new(redis) }
+
+      def write_concurrently(threads:, &block)
+        Array.new(threads) do |t|
+          Thread.new do
+            client = Redis.new
+            block.call(described_class.new(storage: client), t)
+          ensure
+            client&.close
+          end
+        end.each(&:join)
+      end
+
+      it 'does not lose updates' do
+        top_k.reserve('users', top_k: 10, width: 10, depth: 2, decay: 0.9)
+
+        write_concurrently(threads: 5) do |client_top_k, _|
+          50.times { client_top_k.add('users', 'item') }
+        end
+
+        expect(top_k.count('users', 'item')).to eq [250]
+      end
+
+      it 'keeps the min-heap within top_k' do
+        top_k.reserve('users', top_k: 5, width: 16, depth: 2, decay: 0.9)
+
+        write_concurrently(threads: 5) do |client_top_k, t|
+          40.times { |i| client_top_k.add('users', "item_#{t}_#{i}") }
+        end
+
+        members = redis.zrange(heap.sorted_set_key('users'), 0, -1)
+        expect(members.size).to eq 5
+        expect(redis.hkeys(heap.hash_key('users'))).to match_array(members)
+      end
+    end
   end
 
   describe '#remove' do
