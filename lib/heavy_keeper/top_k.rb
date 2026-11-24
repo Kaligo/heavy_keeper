@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'digest'
 require 'dry-schema'
 require 'securerandom'
 require 'stringio'
@@ -14,6 +15,14 @@ module HeavyKeeper
       required(:depth).filled(:integer, gt?: 0)
       required(:decay).filled(:decimal, gt?: 0, lteq?: 1)
     end
+
+    INCREASE_BY_SCRIPT = File.read(File.join(__dir__, 'increase_by.lua')).freeze
+    INCREASE_BY_SHA = Digest::SHA1.hexdigest(INCREASE_BY_SCRIPT).freeze
+
+    # Redis blocks all other clients while a script runs. Each script handles
+    # at most this many bucket updates (items x depth), which keeps one script
+    # near 1 ms. Larger calls are split into more than one script.
+    MAX_BUCKET_UPDATES_PER_SCRIPT = 256
 
     # Initiate the controller to create/operate on top-k DS
     #
@@ -65,68 +74,33 @@ module HeavyKeeper
     # Complexity O(k + (increment * depth))
     # Add an array of items to a Top-K DS, with custom increment for each item
     #
+    # Uses 1 HGETALL and 1 EVALSHA for each call. The script does all reads and
+    # writes of the buckets and the min-heap, so each script is atomic. A call
+    # with more than MAX_BUCKET_UPDATES_PER_SCRIPT bucket updates is split into
+    # more than one script, and is not atomic as a whole.
+    #
     # @param key [String] key for identifying top-k DS in Redis
     # @param items_and_increments [[String, Integer], ...]
     #        each value represents an item and increment that needs to be added
-    #        to Top-K
+    #        to Top-K. Each increment must be an Integer.
     #
-    # @return [Array[Nil, String]]
+    # @raise [HeavyKeeper::Error] if an increment is not an Integer
+    #
+    # @return [Array[Nil, Integer]]
     #         nil if the item is not addded to the list
     #         otherwise, return the current value of item
-    # rubocop:disable Metrics/AbcSize
-    # rubocop:disable Metrics/MethodLength
-    # rubocop:disable Metrics/BlockLength
-    # rubocop:disable Metrics/PerceivedComplexity
     def increase_by(key, *items_and_increments)
+      validate_increments(items_and_increments)
       options = validate(storage.hgetall(metadata_key(key)))
+      keys = increase_by_keys(key)
+      header = [options[:top_k], options[:depth], options[:decay].to_s('F')]
+      items_per_script = [MAX_BUCKET_UPDATES_PER_SCRIPT / options[:depth], 1].max
 
-      items_and_increments.map do |(item, increment)|
-        max_count = 0
-        item_fingerprint = XXhash.xxh64(item)
-
-        exist = min_heap.exist?(key, item)
-        min_value = min_heap.min(key)
-
-        options[:depth].times do |i|
-          bucket_number = XXhash.xxh64_stream(StringIO.new(item), i) % options[:width]
-
-          fingerprint, count = bucket.get(key, i, bucket_number)
-
-          if count.nil? || count.zero?
-            bucket.set(key, i, bucket_number, [item_fingerprint, increment])
-            max_count = [increment, max_count].max
-          elsif fingerprint == item_fingerprint
-            if exist || count <= min_value
-              bucket.set(key, i, bucket_number, [fingerprint, count + increment])
-              max_count = [count + increment, max_count].max
-            end
-          else
-            decay = options[:decay]**count
-
-            if SecureRandom.rand < decay
-              count -= increment
-
-              if count.positive?
-                bucket.set(key, i, bucket_number, [fingerprint, count])
-              else
-                bucket.set(key, i, bucket_number, [item_fingerprint, increment])
-                max_count = [increment, max_count].max
-              end
-            end
-          end
-        end
-
-        if exist
-          min_heap.update(key, item, max_count)
-        else
-          min_heap.add(key, item, max_count, options[:top_k])
-        end
+      items_and_increments.each_slice(items_per_script).flat_map do |slice|
+        argv = header + slice.flat_map { |item, increment| increase_by_args(item, increment, options) }
+        run_increase_by(keys, argv)
       end
     end
-    # rubocop:enable Metrics/AbcSize
-    # rubocop:enable Metrics/MethodLength
-    # rubocop:enable Metrics/BlockLength
-    # rubocop:enable Metrics/PerceivedComplexity
 
     # Complexity O(k)
     # Checks whether an item is one of Top-K items. Multiple items can be checked at once.
@@ -174,10 +148,11 @@ module HeavyKeeper
     #
     # @return OK if successful; otherwise, raise error
     def clear(key)
-      storage.multi do
-        storage.del(metadata_key(key))
-        min_heap.clear(key)
-        bucket.clear(key)
+      storage.multi do |transaction|
+        transaction.del(metadata_key(key))
+        transaction.del(min_heap.sorted_set_key(key))
+        transaction.del(min_heap.hash_key(key))
+        transaction.del(bucket.hash_key(key))
       end
     end
 
@@ -205,6 +180,42 @@ module HeavyKeeper
     private
 
     attr_reader :storage, :min_heap, :bucket
+
+    # KEYS for increase_by.lua, in the order that the script expects
+    def increase_by_keys(key)
+      [bucket.hash_key(key), min_heap.sorted_set_key(key), min_heap.hash_key(key)]
+    end
+
+    # Arguments for one item: item, fingerprint, increment, then depth bucket
+    # columns and depth random numbers. The fingerprint goes as a string,
+    # because Lua numbers cannot hold all 64-bit values.
+    def increase_by_args(item, increment, options)
+      depth = options[:depth]
+      columns = Array.new(depth) { |i| XXhash.xxh64_stream(StringIO.new(item), i) % options[:width] }
+      randoms = Array.new(depth) { SecureRandom.rand.to_s }
+
+      [item, XXhash.xxh64(item).to_s, increment, *columns, *randoms]
+    end
+
+    # The script stores counts as integers, so it would cut a Float increment
+    # to an integer. Check all items before any write.
+    def validate_increments(items_and_increments)
+      items_and_increments.each do |item, increment|
+        next if increment.is_a?(Integer)
+
+        raise HeavyKeeper::Error, "Increment for #{item.inspect} must be an integer, got #{increment.inspect}"
+      end
+    end
+
+    # Redis can lose its script cache, for example after a failover or
+    # SCRIPT FLUSH. EVAL runs the full script and loads it into the cache again.
+    def run_increase_by(keys, argv)
+      storage.evalsha(INCREASE_BY_SHA, keys: keys, argv: argv)
+    rescue Redis::CommandError => e
+      raise unless e.message.start_with?('NOSCRIPT')
+
+      storage.eval(INCREASE_BY_SCRIPT, keys: keys, argv: argv)
+    end
 
     def metadata_key(key)
       "#{key_prefix}:#{key}:data"
