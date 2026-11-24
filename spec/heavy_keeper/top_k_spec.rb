@@ -205,6 +205,18 @@ RSpec.describe HeavyKeeper::TopK do
       it { is_expected.to eq [nil, 10] }
     end
 
+    context 'when an increment is not an integer' do
+      let(:items) { [['item_1', 1], ['item_2', 1.5]] }
+
+      before { top_k.reserve('users', top_k: 10, width: 10, depth: 2, decay: 0.9) }
+
+      it 'raises error and writes nothing' do
+        expect { subject }
+          .to raise_error(HeavyKeeper::Error, 'Increment for "item_2" must be an integer, got 1.5')
+          .and not_change { top_k.query('users', 'item_1') }
+      end
+    end
+
     context 'when there are several items' do
       let(:items) { [['item_1', 1], ['item_2', 2], ['item_3', 3]] }
 
@@ -257,7 +269,9 @@ RSpec.describe HeavyKeeper::TopK do
         top_k.reserve('users', top_k: 1, width: 1, depth: 1, decay: 0.9)
         # Data as written by the Ruby implementation before 0.2.0
         bucket.set('users', 0, 0, [fingerprint, 5])
-        HeavyKeeper::MinHeap.new(redis).add('users', item, 5, 1)
+        heap = HeavyKeeper::MinHeap.new(redis)
+        redis.zadd(heap.sorted_set_key('users'), 5, item)
+        redis.hset(heap.hash_key('users'), item, 5)
       end
 
       it 'reads and updates the bucket in the same format' do

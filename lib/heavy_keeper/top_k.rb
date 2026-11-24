@@ -8,7 +8,7 @@ require 'xxhash'
 require_relative 'validations/message'
 
 module HeavyKeeper
-  class TopK
+  class TopK # rubocop:disable Metrics/ClassLength
     Validator = ::Dry::Schema.Params do
       required(:top_k).filled(:integer, gt?: 0)
       required(:width).filled(:integer, gt?: 0)
@@ -82,14 +82,17 @@ module HeavyKeeper
     # @param key [String] key for identifying top-k DS in Redis
     # @param items_and_increments [[String, Integer], ...]
     #        each value represents an item and increment that needs to be added
-    #        to Top-K
+    #        to Top-K. Each increment must be an Integer.
+    #
+    # @raise [HeavyKeeper::Error] if an increment is not an Integer
     #
     # @return [Array[Nil, Integer]]
     #         nil if the item is not addded to the list
     #         otherwise, return the current value of item
     def increase_by(key, *items_and_increments)
+      validate_increments(items_and_increments)
       options = validate(storage.hgetall(metadata_key(key)))
-      keys = [bucket.hash_key(key), min_heap.sorted_set_key(key), min_heap.hash_key(key)]
+      keys = increase_by_keys(key)
       header = [options[:top_k], options[:depth], options[:decay].to_s('F')]
       items_per_script = [MAX_BUCKET_UPDATES_PER_SCRIPT / options[:depth], 1].max
 
@@ -178,6 +181,11 @@ module HeavyKeeper
 
     attr_reader :storage, :min_heap, :bucket
 
+    # KEYS for increase_by.lua, in the order that the script expects
+    def increase_by_keys(key)
+      [bucket.hash_key(key), min_heap.sorted_set_key(key), min_heap.hash_key(key)]
+    end
+
     # Arguments for one item: item, fingerprint, increment, then depth bucket
     # columns and depth random numbers. The fingerprint goes as a string,
     # because Lua numbers cannot hold all 64-bit values.
@@ -187,6 +195,16 @@ module HeavyKeeper
       randoms = Array.new(depth) { SecureRandom.rand.to_s }
 
       [item, XXhash.xxh64(item).to_s, increment, *columns, *randoms]
+    end
+
+    # The script stores counts as integers, so it would cut a Float increment
+    # to an integer. Check all items before any write.
+    def validate_increments(items_and_increments)
+      items_and_increments.each do |item, increment|
+        next if increment.is_a?(Integer)
+
+        raise HeavyKeeper::Error, "Increment for #{item.inspect} must be an integer, got #{increment.inspect}"
+      end
     end
 
     # Redis can lose its script cache, for example after a failover or

@@ -7,8 +7,14 @@
     - The Redis server must allow `EVAL` and `EVALSHA`. Redis 5.0 or later is still
       required, as before.
     - Note that EVALSHA is not supported by MockRedis, so this could be a breaking change for CI.
-- Fix `TopK#clear`, `MinHeap#add` and `MinHeap#update` when using redis-rb v5.
-  They called commands on the Redis client inside `multi`, not on the yielded
+- `TopK#increase_by` now raises `HeavyKeeper::Error` when an increment is not an
+  Integer. This is a breaking change for callers that pass Float increments.
+  A bucket with a Float count, which only a Float increment in 0.1.6 can write,
+  makes the script raise an error.
+- Remove the internal methods `MinHeap#add`, `MinHeap#update`, `MinHeap#min`,
+  `MinHeap#clear` and `Bucket#clear`. The Lua script now does these writes.
+- Fix `TopK#clear` when using redis-rb v5.
+  It called commands on the Redis client inside `multi`, not on the yielded
   transaction. redis-rb 5 then sends them as separate commands, with no
   `MULTI` or `EXEC`.
 

@@ -20,10 +20,6 @@ module HeavyKeeper
       value ? JSON.parse(value) : value
     end
 
-    def clear(key)
-      storage.del(hash_key(key))
-    end
-
     def hash_key(key)
       "#{key_prefix}:hash:#{key}"
     end
