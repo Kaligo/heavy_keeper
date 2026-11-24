@@ -36,9 +36,9 @@ module HeavyKeeper
     def add(key, item, value, top_k)
       count = storage.zcard(sorted_set_key(key))
 
-      storage.multi do
-        storage.zadd(sorted_set_key(key), value, item)
-        storage.hset(hash_key(key), item, value)
+      storage.multi do |transaction|
+        transaction.zadd(sorted_set_key(key), value, item)
+        transaction.hset(hash_key(key), item, value)
       end
 
       if count >= top_k
@@ -54,10 +54,10 @@ module HeavyKeeper
     end
 
     def update(key, item, value)
-      storage.multi do
-        storage.zrem(sorted_set_key(key), item)
-        storage.zincrby(sorted_set_key(key), value, item)
-        storage.hset(hash_key(key), item, value)
+      storage.multi do |transaction|
+        transaction.zrem(sorted_set_key(key), item)
+        transaction.zincrby(sorted_set_key(key), value, item)
+        transaction.hset(hash_key(key), item, value)
       end
 
       value

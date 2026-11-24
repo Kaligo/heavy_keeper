@@ -463,6 +463,15 @@ RSpec.describe HeavyKeeper::TopK do
         }.to change { top_k.query('users', 'item') }
           .from([true]).to([false])
       end
+
+      it 'deletes all keys in one transaction' do
+        exec_calls = -> { redis.info('commandstats').dig('exec', 'calls').to_i }
+
+        expect {
+          top_k.clear('users')
+        }.to change { exec_calls.call }.by(1)
+          .and change { redis.keys('*').size }.from(4).to(0)
+      end
     end
   end
 end

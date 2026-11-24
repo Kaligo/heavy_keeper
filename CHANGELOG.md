@@ -9,6 +9,10 @@ one script, to limit how long each script blocks Redis.
 - The Redis server must allow `EVAL` and `EVALSHA`. Redis 5.0 or later is still
 required, as before.
 - The Redis data format does not change. Lists written by 0.1.6 keep working.
+- Fix `TopK#clear`, `MinHeap#add` and `MinHeap#update` with redis-rb 5. They
+called commands on the Redis client inside `multi`, not on the yielded
+transaction. redis-rb 5 then sends them as separate commands, with no
+`MULTI` or `EXEC`.
 
 ## [0.1.6] - 2025-02-04
 

@@ -145,10 +145,11 @@ module HeavyKeeper
     #
     # @return OK if successful; otherwise, raise error
     def clear(key)
-      storage.multi do
-        storage.del(metadata_key(key))
-        min_heap.clear(key)
-        bucket.clear(key)
+      storage.multi do |transaction|
+        transaction.del(metadata_key(key))
+        transaction.del(min_heap.sorted_set_key(key))
+        transaction.del(min_heap.hash_key(key))
+        transaction.del(bucket.hash_key(key))
       end
     end
 
